@@ -3,8 +3,9 @@ from datetime import datetime
 import csv
 from pathlib import Path
 from collections import defaultdict
+from pyxirr import xirr
 
-csrf_token = "xxxx"  # Fetch manually
+csrf_token = "xxxxxx"  # Fetch manually
 jwt = "xxxxxx"  # Fetch manually
 
 
@@ -67,6 +68,16 @@ def get_subscription_details():
     return subscription_details
 
 
+def calculate_xirr(xirr_dict):
+    cash_flow = []
+    time = []
+    for key, val in xirr_dict.items():
+        time.append(key)
+        cash_flow.append(val)
+
+    return xirr(time, cash_flow)
+
+
 def date_helper(date_time):
     return datetime.fromisoformat(date_time[:-1]).strftime("%Y-%m-%d")
 
@@ -74,13 +85,13 @@ def date_helper(date_time):
 # [{"date", "label", "buy_amount", "sell_amount", "buy_quantity", "sell_quantity", "dp_charges"}]
 def write_to_csv(smallcase_name, sorted_rows, summary_row):
     header = ["date", "label", "buy_amount", "sell_amount", "buy_quantity", "sell_quantity", "dp_charges"]
-    file_name = Path(__file__).with_name(smallcase_name + '.csv')
+    file_name = Path(__file__).with_name(smallcase_name + datetime.strftime(datetime.now(), "%Y-%m-%d") + '.csv')
     with open(file_name, 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(sorted_rows)
         writer.writerows([[] * 5])
-        writer.writerow(["total_invested", "current_value", "current_returns", "time_in_days", "time_in_years"])
+        writer.writerow(["total_invested", "current_value", "current_returns", "time_in_days", "time_in_years", "xirr"])
         writer.writerow(summary_row)
 
 
@@ -88,6 +99,7 @@ def main():
     subscription_details = get_subscription_details()
     invested_smallcases = get_investments()
     dp_charge = 15
+    xirr_dict = defaultdict(float)
     for invested_smallcase in invested_smallcases:
         rows = []
         iscid = invested_smallcase["_id"]
@@ -107,6 +119,7 @@ def main():
 
             rows.append([date_helper(batch["date"]), batch["label"], round(batch["buyAmount"], 2),
                          round(batch["sellAmount"], 2), buy_quantity, sell_quantity, sell_quantity * dp_charge])
+            xirr_dict[datetime.fromisoformat(batch["date"][:-1]).date()] += round(batch["sellAmount"], 2) - round(batch["buyAmount"], 2)
 
         sorted_rows = sorted(rows, key=lambda x: (x[0]))
         total_invested = 0
@@ -118,8 +131,10 @@ def main():
         days = (current_day - start_day).days
         years = days // 365
         months = (days - years * 365) // 30
+        xirr_dict[datetime.now().date()] += current_value
+        xirr = calculate_xirr(xirr_dict)
         summary_row = [round(total_invested, 2), round(current_value, 2), round(current_value - total_invested, 2),
-                       days, round(years + (0.1 * months), 2)]
+                       days, round(years + (0.1 * months), 2), round(xirr * 100, 2)]
         write_to_csv(invested_smallcase["name"], sorted_rows, summary_row)
 
 
