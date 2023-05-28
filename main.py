@@ -5,8 +5,8 @@ from pathlib import Path
 from collections import defaultdict
 from pyxirr import xirr
 
-csrf_token = "xxxxxx"  # Fetch manually
-jwt = "xxxxxx"  # Fetch manually
+csrf_token = "xxxxx"  # Fetch manually
+jwt = "xxxxx"  # Fetch manually
 
 
 def get_investments():
@@ -85,7 +85,9 @@ def date_helper(date_time):
 # [{"date", "label", "buy_amount", "sell_amount", "buy_quantity", "sell_quantity", "dp_charges"}]
 def write_to_csv(smallcase_name, sorted_rows, summary_row):
     header = ["date", "label", "buy_amount", "sell_amount", "buy_quantity", "sell_quantity", "dp_charges"]
-    file_name = Path(__file__).with_name(smallcase_name + datetime.strftime(datetime.now(), "%Y-%m-%d") + '.csv')
+    file_name = 'history/' + smallcase_name + datetime.strftime(datetime.now(), "%Y-%m-%d") + '.csv'
+    file_name = Path(__file__).parent / file_name
+
     with open(file_name, 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(header)
